@@ -1,65 +1,58 @@
-import 'braid-design-system/reset';
-import wireframe from 'braid-design-system/themes/wireframe';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  BraidProvider,
-  Text,
-  Inline,
-  Button,
-  Stack,
-  TextField,
-} from 'braid-design-system';
+import 'react-bootstrap';
 import './App.css';
 import { io } from 'socket.io-client';
 import { useRef } from 'react';
 import { Game } from './Game';
-
-let username = '';
-let server_url = '';
-if (process.env.REACT_APP_SERVER_URL === undefined) {
-  server_url = 'localhost:8080';
-} else {
-  server_url = process.env.REACT_APP_SERVER_URL;
-}
-console.log('url is :' + server_url);
-const socket = io(server_url, {
-  withCredentials: false,
-  extraHeaders: {
-    'sa-client': 'client',
-  },
-  autoConnect: false,
-});
-
-const appendMessage = (author, text) => {
-  document.getElementById('message').innerHTML += `<br>${author}: ${text}`;
-};
-
-const setUsername = () => {
-  username = document.getElementById('usernameInput').value;
-  appendMessage('System', `Your name is now ${username}`);
-};
-
-socket.on('connect', () => {
-  appendMessage('System', 'You are now connected to the server.');
-});
-
-socket.on('disconnect', () => {
-  appendMessage('System', 'You are now disconnected from the server.');
-});
-
-socket.on('server-message', (author, message) => {
-  appendMessage(author, message);
-});
-
-socket.on('sync-game', (data) => {
-  appendMessage('Game', data);
-});
+import { Stack, Button, Form } from 'react-bootstrap';
 
 function App() {
   let messageInput = useRef(null);
   let roomIdInput = useRef(null);
+  let usernameInput = useRef(null);
   let gameWindow = useRef(null);
   let roomId = '';
+
+  let username = '';
+  let server_url = '';
+  if (process.env.REACT_APP_SERVER_URL === undefined) {
+    server_url = 'localhost:8080';
+  } else {
+    server_url = process.env.REACT_APP_SERVER_URL;
+  }
+  console.log('url is :' + server_url);
+  const socket = io(server_url, {
+    withCredentials: false,
+    extraHeaders: {
+      'sa-client': 'client',
+    },
+    autoConnect: false,
+  });
+
+  socket.on('connect', () => {
+    appendMessage('System', 'You are now connected to the server.');
+  });
+
+  socket.on('disconnect', () => {
+    appendMessage('System', 'You are now disconnected from the server.');
+  });
+
+  socket.on('server-message', (author, message) => {
+    appendMessage(author, message);
+  });
+
+  socket.on('sync-game', (data) => {
+    appendMessage('Game', data);
+  });
+
+  const appendMessage = (author, text) => {
+    document.getElementById('message').innerHTML += `<br>${author}: ${text}`;
+  };
+
+  const setUsername = () => {
+    username = usernameInput.current.value;
+    appendMessage('System', `Your name is now ${username}`);
+  };
 
   const generateRoomId = () => {
     roomId = uuidv4();
@@ -117,54 +110,57 @@ function App() {
   console.profile();
 
   return (
-    <BraidProvider theme={wireframe} className='App'>
+    <div className='App'>
+      <link
+        rel='stylesheet'
+        href='https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'
+      ></link>
       <Stack space='large'>
-        <Inline space='small' collapseBelow='desktop'>
-          <Button variant='solid' onClick={createAndJoinRoom}>
+        <Stack direction='horizontal' space='small' collapseBelow='desktop'>
+          <Button variant='primary' onClick={createAndJoinRoom}>
             Create Room
           </Button>
-          <Button variant='ghost' onClick={leaveRoom}>
+          <Button variant='primary' onClick={leaveRoom}>
             Leave Room
           </Button>
-          <Button variant='solid' onClick={setUsername}>
+          <Button variant='primary' onClick={setUsername}>
             Set User Name
           </Button>
-          <Button variant='solid' onClick={joinRoom}>
+          <Button variant='primary' onClick={joinRoom}>
             Join Room
           </Button>
-          <Button variant='solid' onClick={sendMessage}>
+          <Button variant='primary' onClick={sendMessage}>
             Send
           </Button>
-        </Inline>
-        <TextField
-          ref={roomIdInput}
-          label='Room ID'
-          // onChange={setState('textfield')}
-          // value={getState('textfield')}
-          tone='neutral'
-        />
-        <TextField
-          id='usernameInput'
-          label='Username'
-          // onChange={setState('textfield')}
-          // value={getState('textfield')}
-          tone='neutral'
-        />
-        <TextField
-          ref={messageInput}
-          label='Chat here'
-          // onChange={setState('textfield')}
-          // value={getState('textfield')}
-          tone='neutral'
-        />
+        </Stack>
+        <div style={{ verticalAlign: 'left' }}>
+          <Form.Label>Room ID</Form.Label>
+          <Form.Control
+            type='text'
+            ref={roomIdInput}
+            aria-describedby='roomIdInputDescribe'
+          />
+          <Form.Text id='roomIdInputDescribe' muted>
+            Enter your room ID here to join a room, or generate one upon
+            creating a new room.
+          </Form.Text>
+        </div>
+        <div style={{ verticalAlign: 'left' }}>
+          <Form.Label>Username</Form.Label>
+          <Form.Control type='text' ref={usernameInput} />
+        </div>
+        <div style={{ verticalAlign: 'left' }}>
+          <Form.Label>Chat here:</Form.Label>
+          <Form.Control type='text' ref={messageInput} />
+        </div>
         <div ref={gameWindow}>
           <Game></Game>
         </div>
-        <Text id='message' label='Messages'>
+        <text id='message' label='Messages'>
           Messages are shown here:
-        </Text>
+        </text>
       </Stack>
-    </BraidProvider>
+    </div>
   );
 }
 
