@@ -7,7 +7,12 @@ import { Game } from './game.js';
 const port = process.env.port || 8080;
 const app = express();
 const server = createServer(app);
-const io = new SocketIoServer(server);
+const io = new SocketIoServer(server, {
+  cors: {
+    origin: 'https://seekadventureapp.onrender.com/',
+    methods: ['GET', 'POST'],
+  },
+});
 const SOCKET_TIMEOUT = 15000;
 let gameRooms = {};
 
