@@ -4,7 +4,7 @@ import { Server as SocketIoServer } from 'socket.io';
 import cors from 'cors';
 import { Game } from './game.js';
 
-const port = 8080;
+const port = process.env.port || 8080;
 const app = express();
 const server = createServer(app);
 const io = new SocketIoServer(server);
