@@ -14,12 +14,7 @@ function App() {
   let roomId = '';
 
   let username = '';
-  let server_url = '';
-  if (process.env.REACT_APP_SERVER_URL === undefined) {
-    server_url = 'localhost:8080';
-  } else {
-    server_url = process.env.REACT_APP_SERVER_URL;
-  }
+  let server_url = 'https://seekadventureapp.onrender.com/';
   console.log('url is :' + server_url);
   const socket = io(server_url, {
     withCredentials: false,
