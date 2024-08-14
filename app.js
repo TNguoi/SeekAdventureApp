@@ -9,7 +9,8 @@ const app = express();
 const server = createServer(app);
 const io = new SocketIoServer(server, {
   cors: {
-    origin: 'https://seekadventureapp.onrender.com/',
+    //origin: 'https://seekadventureapp.onrender.com/',
+    origin: 'http://localhost:8080',
     methods: ['GET', 'POST'],
   },
 });

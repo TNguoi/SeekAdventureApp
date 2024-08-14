@@ -8,13 +8,17 @@ import { Stack, Button, Form } from 'react-bootstrap';
 
 function App() {
   let messageInput = useRef(null);
-  let roomIdInput = useRef(null);
   let usernameInput = useRef(null);
   let gameWindow = useRef(null);
-  let roomId = '';
+  let createRoomSection = useRef(null);
+  let setUsernameSection = useRef(null);
+  let mainGameSection = useRef(null);
+  let roomIdDisplay = useRef(null);
 
+  let roomId = '';
   let username = '';
-  let server_url = 'https://seekadventureapp.onrender.com/';
+  //let server_url = 'https://seekadventureapp.onrender.com/';
+  let server_url = 'http://localhost:8080';
   console.log('url is :' + server_url);
   const socket = io(server_url, {
     withCredentials: false,
@@ -46,22 +50,17 @@ function App() {
 
   const setUsername = () => {
     username = usernameInput.current.value;
+    setUsernameSection.current.style.display = 'none';
+    mainGameSection.current.style.display = 'block';
     appendMessage('System', `Your name is now ${username}`);
   };
 
   const generateRoomId = () => {
     roomId = uuidv4();
-    roomIdInput.current.value = roomId;
   };
   const createAndJoinRoom = () => {
     generateRoomId();
-    socket.connect();
-    socket.emit('create-room', roomId);
-
-    appendMessage(
-      'System',
-      `Your room id is ${roomId}, you are now joined in this room.`
-    );
+    window.location.href = server_url + '?roomId=' + roomId + '&isHost=1';
   };
 
   const leaveRoom = () => {
@@ -69,15 +68,7 @@ function App() {
     socket.disconnect();
   };
 
-  const joinRoom = () => {
-    roomId = roomIdInput.current.value;
-    socket.connect();
-    socket.emit('join-room', roomId);
-    appendMessage(
-      'System',
-      `Your room id is ${roomId}, you are now joined in this room.`
-    );
-  };
+  const joinRoom = () => {};
 
   const sendMessage = () => {
     if (username === '') {
@@ -102,7 +93,49 @@ function App() {
     socket.emit('message', author, message);
   };
 
-  console.profile();
+  const copyInvite = () => {
+    navigator.clipboard.writeText(server_url + '?roomId=' + roomId);
+  };
+
+  const joinRoomByInvite = (host) => {
+    if (host) {
+      socket.connect();
+      socket.emit('create-room', roomId);
+
+      appendMessage(
+        'System',
+        `Your room id is ${roomId}, you are now joined in this room.`
+      );
+    } else {
+      socket.connect();
+      socket.emit('join-room', roomId);
+      appendMessage(
+        'System',
+        `Your room id is ${roomId}, you are now joined in this room.`
+      );
+    }
+    createRoomSection.current.style.display = 'none';
+    setUsernameSection.current.style.display = 'block';
+    roomIdDisplay.current.innerHTML = roomId;
+  };
+
+  const currentUrl = new URL(window.location.href);
+  const params = new URLSearchParams(currentUrl.search);
+
+  setTimeout(() => {
+    if (params.has('roomId')) {
+      roomId = params.get('roomId');
+      if (params.has('isHost')) {
+        console.log('hello I am running');
+        joinRoomByInvite(true);
+        console.log('running after');
+      } else {
+        joinRoomByInvite(false);
+      }
+    }
+  }, 100);
+
+  console.log('testa');
 
   return (
     <div className='App'>
@@ -110,40 +143,51 @@ function App() {
         rel='stylesheet'
         href='https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'
       ></link>
-      <Stack space='large'>
+
+      <Stack ref={createRoomSection} space={'large'}>
+        <p>Hello and welcome to Yet another Scrum Poker App</p>
+        <p>Use the Create Room button below to create a room</p>
+        <p>
+          If you're trying to join the room, ask the host to send you the invite
+          link
+        </p>
+        <Button variant='primary' onClick={createAndJoinRoom}>
+          Create Room
+        </Button>
+      </Stack>
+
+      <Stack
+        ref={setUsernameSection}
+        space={'large'}
+        style={{ display: 'none' }}
+      >
         <Stack direction='horizontal' space='small' collapseBelow='desktop'>
-          <Button variant='primary' onClick={createAndJoinRoom}>
-            Create Room
-          </Button>
-          <Button variant='primary' onClick={leaveRoom}>
-            Leave Room
-          </Button>
+          What should we call you?
+          <div style={{ verticalAlign: 'left' }}>
+            <Form.Label>Username</Form.Label>
+            <Form.Control type='text' ref={usernameInput} />
+          </div>
           <Button variant='primary' onClick={setUsername}>
             Set User Name
           </Button>
-          <Button variant='primary' onClick={joinRoom}>
-            Join Room
-          </Button>
-          <Button variant='primary' onClick={sendMessage}>
-            Send
-          </Button>
         </Stack>
+      </Stack>
+
+      <Stack space='large' ref={mainGameSection} style={{ display: 'none' }}>
+        <Button variant='primary' onClick={sendMessage}>
+          Send
+        </Button>
         <div style={{ verticalAlign: 'left' }}>
-          <Form.Label>Room ID</Form.Label>
-          <Form.Control
-            type='text'
-            ref={roomIdInput}
-            aria-describedby='roomIdInputDescribe'
-          />
-          <Form.Text id='roomIdInputDescribe' muted>
-            Enter your room ID here to join a room, or generate one upon
-            creating a new room.
-          </Form.Text>
+          <Stack>
+            <div>
+              Room ID: <p ref={roomIdDisplay}></p>
+            </div>
+            <Button onClick={copyInvite}>
+              Click me to copy the invite link
+            </Button>
+          </Stack>
         </div>
-        <div style={{ verticalAlign: 'left' }}>
-          <Form.Label>Username</Form.Label>
-          <Form.Control type='text' ref={usernameInput} />
-        </div>
+
         <div style={{ verticalAlign: 'left' }}>
           <Form.Label>Chat here:</Form.Label>
           <Form.Control type='text' ref={messageInput} />
