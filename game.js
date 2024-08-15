@@ -1,18 +1,46 @@
 export class Game {
-  grid = [
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ];
-
+  users = [];
+  reveal = false;
   constructor() {}
 
-  plot(x, y, value) {
-    this.grid[x][y] = value;
+  addUser(userId) {
+    this.users.push({ userId: userId, username: 'New User', vote: 0 });
+  }
+
+  removeUser(userId) {
+    this.users = this.users.filter((e) => {
+      e.userId !== userId;
+    });
+  }
+
+  setUsername(userId, username) {
+    for (let i = 0; i < this.users.length; i++) {
+      if (this.users[i].userId === userId) {
+        this.users[i].username = username;
+      }
+    }
+  }
+
+  setReveal(reveal) {
+    this.reveal = reveal;
+  }
+
+  setUserVote(userId, vote) {
+    for (let i = 0; i < this.users.length; i++) {
+      if (this.users[i].userId === userId) {
+        this.users[i].vote = vote;
+      }
+    }
+  }
+
+  resetVote() {
+    for (let i = 0; i < this.users.length; i++) {
+      this.users[i].vote = 0;
+    }
+    this.reveal = false;
   }
 
   data() {
-    return JSON.stringify(this.grid);
+    return JSON.stringify({ users: this.users, reveal: this.reveal });
   }
 }

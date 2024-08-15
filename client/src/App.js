@@ -3,8 +3,8 @@ import 'react-bootstrap';
 import './App.css';
 import { io } from 'socket.io-client';
 import { useRef } from 'react';
-import { Game } from './Game';
 import { Stack, Button, Form } from 'react-bootstrap';
+import { useState } from 'react';
 
 function App() {
   let messageInput = useRef(null);
@@ -14,8 +14,10 @@ function App() {
   let setUsernameSection = useRef(null);
   let mainGameSection = useRef(null);
   let roomIdDisplay = useRef(null);
+  const [game, setGame] = useState('<tr></tr>');
 
   let roomId = '';
+  let userId = '';
   let username = '';
   //let server_url = 'https://seekadventureapp.onrender.com/';
   let server_url = 'http://localhost:8080';
@@ -39,9 +41,34 @@ function App() {
   socket.on('server-message', (author, message) => {
     appendMessage(author, message);
   });
-
   socket.on('sync-game', (data) => {
-    appendMessage('Game', data);
+    //appendMessage('Game', data);
+    //function to sync and render elements
+    let newGameState = '<table><tr><th>Username</th><th>Vote</th></tr>';
+    console.log(data);
+
+    const gameState = JSON.parse(data);
+
+    for (let i = 0; i < gameState.users.length; i++) {
+      let vote = '';
+      if (gameState.reveal) {
+        vote = gameState.users[i].vote;
+      } else {
+        if (gameState.users[i].vote === 0) {
+          vote = 'Waiting for vote...';
+        } else {
+          vote = 'Voted';
+        }
+      }
+      newGameState +=
+        '<tr><td>' +
+        gameState.users[i].username +
+        '</td><td>' +
+        vote +
+        '</td></tr>';
+    }
+    newGameState += '</table>';
+    document.getElementById('gameStateUpdate').innerHTML = newGameState;
   });
 
   const appendMessage = (author, text) => {
@@ -52,43 +79,42 @@ function App() {
     username = usernameInput.current.value;
     setUsernameSection.current.style.display = 'none';
     mainGameSection.current.style.display = 'block';
+    socket.emit('set-username', userId, username);
     appendMessage('System', `Your name is now ${username}`);
+  };
+
+  const setUserVote = (vote) => {
+    socket.emit('set-vote', userId, vote);
+  };
+
+  const revealCards = () => {
+    socket.emit('set-reveal', true);
+  };
+
+  const resetCards = () => {
+    socket.emit('reset');
   };
 
   const generateRoomId = () => {
     roomId = uuidv4();
   };
+
+  const generateUserId = () => {
+    userId = uuidv4();
+  };
+
   const createAndJoinRoom = () => {
     generateRoomId();
     window.location.href = server_url + '?roomId=' + roomId + '&isHost=1';
   };
 
-  const leaveRoom = () => {
-    roomId = '';
-    socket.disconnect();
-  };
-
-  const joinRoom = () => {};
-
   const sendMessage = () => {
-    if (username === '') {
-      appendMessage('System', 'Please set your username first');
-      return;
-    }
-
-    if (socket.disconnected) {
-      appendMessage('System', 'Please join or create a room first');
-      return;
-    }
-
     const message = messageInput.current.value;
     console.log(message);
     const author = username;
-
     if (message === '') {
       return;
     }
-
     messageInput.current.value = '';
     socket.emit('message', author, message);
   };
@@ -98,17 +124,18 @@ function App() {
   };
 
   const joinRoomByInvite = (host) => {
+    generateUserId();
     if (host) {
       socket.connect();
-      socket.emit('create-room', roomId);
+      socket.emit('create-room', roomId, userId);
 
       appendMessage(
         'System',
-        `Your room id is ${roomId}, you are now joined in this room.`
+        `Room created.\nYour room id is ${roomId}, you are now joined in this room.\nYou can forward the link to invite others to join.`
       );
     } else {
       socket.connect();
-      socket.emit('join-room', roomId);
+      socket.emit('join-room', roomId, userId);
       appendMessage(
         'System',
         `Your room id is ${roomId}, you are now joined in this room.`
@@ -122,20 +149,17 @@ function App() {
   const currentUrl = new URL(window.location.href);
   const params = new URLSearchParams(currentUrl.search);
 
+  //no idea why this will run twice unless I put a timeout on it
   setTimeout(() => {
     if (params.has('roomId')) {
       roomId = params.get('roomId');
       if (params.has('isHost')) {
-        console.log('hello I am running');
         joinRoomByInvite(true);
-        console.log('running after');
       } else {
         joinRoomByInvite(false);
       }
     }
   }, 100);
-
-  console.log('testa');
 
   return (
     <div className='App'>
@@ -193,7 +217,66 @@ function App() {
           <Form.Control type='text' ref={messageInput} />
         </div>
         <div ref={gameWindow}>
-          <Game></Game>
+          <Stack>
+            <div id='gameStateUpdate'></div>
+          </Stack>
+          <br></br>
+          <Stack>
+            <Button onClick={revealCards}>Show Cards</Button>
+            <Button onClick={resetCards}>Reset Cards</Button>
+          </Stack>
+          <br></br>
+          <Stack>
+            <Button
+              onClick={() => {
+                setUserVote(1);
+              }}
+            >
+              1
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote(2);
+              }}
+            >
+              2
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote(3);
+              }}
+            >
+              3
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote(5);
+              }}
+            >
+              5
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote(8);
+              }}
+            >
+              8
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote(13);
+              }}
+            >
+              13
+            </Button>
+            <Button
+              onClick={() => {
+                setUserVote('?');
+              }}
+            >
+              ?
+            </Button>
+          </Stack>
         </div>
         <text id='message' label='Messages'>
           Messages are shown here:

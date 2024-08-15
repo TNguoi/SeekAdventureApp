@@ -25,8 +25,9 @@ app.use(express.static('client/build'));
 
 io.on('connection', (socket) => {
   let roomId = '';
+  let userId = '';
   let host = false;
-  let game = {};
+  let game = new Game();
   const checkConnectionInterval = setInterval(() => {
     if (socket.connected) {
       //console.log('Connection is still active');
@@ -46,27 +47,24 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('server-message', author, message);
   });
 
-  socket.on('create-room', (newRoomId) => {
+  socket.on('create-room', (newRoomId, newUserId) => {
     console.log(`${newRoomId} room created`);
     socket.join(newRoomId);
     roomId = newRoomId;
+    userId = newUserId;
     initRoomState();
   });
-  socket.on('join-room', (newRoomId) => {
+
+  socket.on('join-room', (newRoomId, newUserId) => {
     roomId = newRoomId;
+    userId = newUserId;
     socket.join(roomId);
     console.log('joined room ' + newRoomId);
     initRoomState();
   });
 
   socket.on('request-sync-game', () => {
-    console.log('request-sync-game received');
-    if (host) {
-      console.log('host emitting sync-game');
-      io.to(roomId).emit('sync-game', game.data());
-    } else {
-      console.log('not a host');
-    }
+    io.to(roomId).emit('sync-game', game.data());
   });
 
   socket.on('input', () => {});
@@ -82,8 +80,8 @@ io.on('connection', (socket) => {
       //create a game and assign host
       host = true;
       game = new Game();
+      game.addUser(userId);
       gameRooms[roomId] = game;
-
       console.log('host operation');
       update();
     } else {
@@ -91,14 +89,48 @@ io.on('connection', (socket) => {
       console.log('sending request to sync');
       //io.to(roomId).emit('request-sync-game');
       if (!gameRooms.hasOwnProperty(roomId)) {
-        socket.emit('server-message', 'error host did not create a game');
+        socket.emit(
+          'server-message',
+          'System',
+          'error host did not create a game'
+        );
         return;
+      } else if (host) {
+        //case if player join as host when game already has host
+        socket.emit(
+          'server-message',
+          'System',
+          'Attempted to join as host, join as player instead.'
+        );
       }
 
       game = gameRooms[roomId];
+      game.addUser(userId);
       update();
     }
   };
+
+  socket.on('set-vote', (userId, vote) => {
+    console.log('setVote:' + vote);
+    game.setUserVote(userId, vote);
+    update();
+  });
+
+  socket.on('set-reveal', (reveal) => {
+    game.setReveal(reveal);
+    update();
+  });
+
+  socket.on('reset', () => {
+    game.resetVote();
+    update();
+  });
+
+  socket.on('set-username', (userId, username) => {
+    console.log('set-username:' + userId + '&' + username);
+    game.setUsername(userId, username);
+    update();
+  });
 });
 
 server.listen(port, () => {
