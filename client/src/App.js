@@ -19,8 +19,8 @@ function App() {
   let roomId = '';
   let userId = '';
   let username = '';
-  //let server_url = 'https://seekadventureapp.onrender.com/';
-  let server_url = 'http://localhost:8080';
+  let server_url = 'https://seekadventureapp.onrender.com/';
+  //let server_url = 'http://localhost:8080';
   console.log('url is :' + server_url);
   const socket = io(server_url, {
     withCredentials: false,
